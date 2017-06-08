@@ -1,14 +1,12 @@
-package org.homer.neo4j.graphmanager.procedure;
+package org.homer.graph.sql.versioner;
 
-import org.homer.neo4j.graphmanager.output.NodeOutput;
+import org.homer.graph.versioner.output.NodeOutput;
 import org.neo4j.graphdb.*;
 import org.neo4j.logging.Log;
 import org.neo4j.procedure.*;
 
 import java.sql.*;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
@@ -23,8 +21,8 @@ public class Init {
     @Context
     public Log log;
 
-    @Procedure(value = "sql.manager.init", mode = Mode.WRITE)
-    @Description("sql.manager.init(schema) - Create a Database node by importing from the database.")
+    @Procedure(value = "sql.versioner.init", mode = Mode.WRITE)
+    @Description("sql.versioner.init(schema) - Create a Database node by importing from the database.")
     public Stream<NodeOutput> init(
             @Name("hostname") String hostname,
             @Name("port") Long port,
@@ -49,22 +47,26 @@ public class Init {
 
                     try (ResultSet tablesRs = con.createStatement().executeQuery(String.format("SELECT table_name FROM information_schema.tables WHERE table_schema = '%s'", schema.getProperty("name")))) {
                         while (tablesRs.next()) {
-                            Node table = db.createNode();
-                            table.addLabel(Label.label("Table"));
-                            table.setProperty("_name", tablesRs.getString(1));
+                            Map<String, Object> tableAttributes = new HashMap<>();
+                            tableAttributes.put("name", tablesRs.getString(1));
 
-                            schema.createRelationshipTo(table, RelationshipType.withName("HAS_TABLE"));
+                            Map<String, Object> tableColumns = new HashMap<>();
 
-                            try (ResultSet columnRs = con.createStatement().executeQuery(String.format("SELECT column_name, data_type, is_nullable FROM information_schema.columns WHERE table_schema = '%s' AND table_name = '%s'", schema.getProperty("name"), table.getProperty("_name")))) {
+                            try (ResultSet columnRs = con.createStatement().executeQuery(String.format("SELECT column_name, data_type, is_nullable FROM information_schema.columns WHERE table_schema = '%s' AND table_name = '%s'", schema.getProperty("name"), tableAttributes.get("name")))) {
                                 while (columnRs.next()) {
                                     List<String> attributes = new LinkedList<>();
                                     attributes.add(columnRs.getString(2));
                                     if (columnRs.getBoolean(3)) {
                                         attributes.add("NOT NULL");
                                     }
-                                    table.setProperty(columnRs.getString(1), attributes.toArray(new String[attributes.size()]));
+                                    tableColumns.put(columnRs.getString(1), attributes.toArray(new String[attributes.size()]));
                                 }
                             }
+
+                            new org.homer.graph.versioner.builders.InitBuilder().withDb(db).withLog(log).build()
+                                    .map(init -> init.init("Table", tableAttributes, tableColumns, "", 0L))
+                                    .flatMap(Stream::findAny)
+                                    .ifPresent(tableNode -> schema.createRelationshipTo(db.getNodeById(tableNode.node.getId()), RelationshipType.withName("HAS_TABLE")));
                         }
                     }
                 }
@@ -80,11 +82,11 @@ public class Init {
                     String destinationSchemaName = foreignKeysRs.getString(6);
                     String destinationColumnName = foreignKeysRs.getString(7);
 
-                    Optional<Node> sourceTable = Optional.ofNullable(db.findNodes(Label.label("Schema"), "name", sourceSchemaName).stream()
-                            .map(n -> getChildTableWithName(n, sourceTableName)).findFirst().orElse(null));
+                    Optional<Node> sourceTable = db.findNodes(Label.label("Schema"), "name", sourceSchemaName).stream()
+                            .map(n -> getChildTableWithName(n, sourceTableName)).findFirst();
 
-                    Optional<Node> destinationTable = Optional.ofNullable(db.findNodes(Label.label("Schema"), "name", destinationSchemaName).stream()
-                            .map(n -> getChildTableWithName(n, destinationTableName)).findFirst().orElse(null));
+                    Optional<Node> destinationTable = db.findNodes(Label.label("Schema"), "name", destinationSchemaName).stream()
+                            .map(n -> getChildTableWithName(n, destinationTableName)).findFirst();
 
                     if (sourceTable.isPresent() && destinationTable.isPresent()) {
                         Relationship relationship = sourceTable.get().createRelationshipTo(destinationTable.get(), RelationshipType.withName("RELATION"));
@@ -99,8 +101,11 @@ public class Init {
         return Stream.of(new NodeOutput(database));
     }
 
-    Node getChildTableWithName(Node node, String tableName) {
+    private Node getChildTableWithName(Node node, String tableName) {
         return StreamSupport.stream(node.getRelationships(RelationshipType.withName("HAS_TABLE")).spliterator(), false)
-                .filter(r -> tableName.equals(r.getEndNode().getProperty("_name"))).map(Relationship::getEndNode).findFirst().orElse(null);
+                .filter(r -> tableName.equals(r.getEndNode().getProperty("name"))).map(Relationship::getEndNode)
+                .flatMap(tableEntity -> new org.homer.graph.versioner.builders.GetBuilder().build().get().getCurrentState(tableEntity))
+                .map(tableCurrent -> db.getNodeById(tableCurrent.node.getId()))
+                .findAny().orElse(null);
     }
 }
