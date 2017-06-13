@@ -1,2 +1,1 @@
-rootProject.name = 'neo4j-sql-manager'
-
+rootProject.name = 'neo4j-versioner-sql'
