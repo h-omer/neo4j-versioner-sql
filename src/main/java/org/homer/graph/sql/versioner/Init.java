@@ -1,11 +1,14 @@
 package org.homer.graph.sql.versioner;
 
-import org.homer.graph.versioner.output.NodeOutput;
+import org.homer.versioner.core.output.NodeOutput;
 import org.neo4j.graphdb.*;
 import org.neo4j.logging.Log;
 import org.neo4j.procedure.*;
 
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.*;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
@@ -63,7 +66,7 @@ public class Init {
                                 }
                             }
 
-                            new org.homer.graph.versioner.builders.InitBuilder().withDb(db).withLog(log).build()
+                            new org.homer.versioner.core.builders.InitBuilder().withDb(db).withLog(log).build()
                                     .map(init -> init.init("Table", tableAttributes, tableColumns, "", 0L))
                                     .flatMap(Stream::findAny)
                                     .ifPresent(tableNode -> schema.createRelationshipTo(db.getNodeById(tableNode.node.getId()), RelationshipType.withName("HAS_TABLE")));
@@ -104,7 +107,7 @@ public class Init {
     private Node getChildTableWithName(Node node, String tableName) {
         return StreamSupport.stream(node.getRelationships(RelationshipType.withName("HAS_TABLE")).spliterator(), false)
                 .filter(r -> tableName.equals(r.getEndNode().getProperty("name"))).map(Relationship::getEndNode)
-                .flatMap(tableEntity -> new org.homer.graph.versioner.builders.GetBuilder().build().get().getCurrentState(tableEntity))
+                .flatMap(tableEntity -> new org.homer.versioner.core.builders.GetBuilder().build().get().getCurrentState(tableEntity))
                 .map(tableCurrent -> db.getNodeById(tableCurrent.node.getId()))
                 .findAny().orElse(null);
     }
