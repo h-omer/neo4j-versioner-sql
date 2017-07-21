@@ -55,7 +55,7 @@ public abstract class DatabaseImporter {
     public abstract String getName();
 
     public Database getDatabase() {
-        return new Database(databaseName);
+        return new Database(databaseName, getName());
     }
 
     public void connect(String hostname, Long port, String databaseName, String username, String password) {

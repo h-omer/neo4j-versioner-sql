@@ -13,12 +13,14 @@ public class Database {
 
 	private Long 			nodeId;
 	private String 			name;
+	private String 			databaseType;
 
 	private List<Schema> 	schemas;
 
-	public Database(String name){
+	public Database(String name, String databaseType){
 
 		this.name = name;
+		this.databaseType = databaseType;
 		schemas = newArrayList();
 	}
 

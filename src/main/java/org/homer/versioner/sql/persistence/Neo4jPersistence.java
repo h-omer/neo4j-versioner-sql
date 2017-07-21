@@ -18,18 +18,26 @@ public class Neo4jPersistence {
 
     public Node persist(Database database) {
 
+        Node databaseNode = persistDatabase(database);
+
+		persistForeignKeys(database);
+
+		return databaseNode;
+    }
+
+    private Node persistDatabase(Database database){
+
         Node databaseNode = graphDb.createNode();
 
         databaseNode.addLabel(Label.label("Database"));
 		databaseNode.setProperty("name", database.getName());
+		databaseNode.setProperty("databaseType", database.getDatabaseType());
+
+		database.setNodeId(databaseNode.getId());
 
 		database.getSchemas().forEach(schema ->
                 databaseNode.createRelationshipTo(persistSchema(schema), RelationshipType.withName("HAS_SCHEMA"))
         );
-
-		database.setNodeId(databaseNode.getId());
-
-		persistForeignKeys(database);
 
 		return databaseNode;
     }
