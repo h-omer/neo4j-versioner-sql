@@ -35,23 +35,15 @@ public class TableNode {
 		return newHashMap("name", name);
 	}
 
-	public void addColumn(ResultSet columnRs) throws SQLException {
+	public void addColumn(TableColumn column) {
 
-		TableColumn column = new TableColumn(columnRs.getString(1), newArrayList(columnRs.getString(2)));
-
-		if (columnRs.getBoolean(3)) {
-			column.addAttribute("NOT NULL");
-		}
-
-		columns.add(column);
+	    columns.add(column);
 	}
 
 	public Map<String, Object> getProperties() {
 
 		Map<String, Object> result = newHashMap();
-		columns.forEach((column) -> {
-			result.put(column.getName(), column.getAttributesAsArray());
-		});
+		columns.forEach((column) -> result.put(column.getName(), column.getAttributesAsArray()));
 		return result;
 	}
 

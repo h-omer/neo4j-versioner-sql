@@ -13,7 +13,7 @@ public class PostgresSQLDatabase extends SQLDatabase {
 	}
 
 	@Override
-	public String getSchemaQuery() {
+	protected String getSchemaQuery() {
 		return "SELECT DISTINCT table_schema FROM information_schema.tables WHERE table_schema NOT IN ('pg_catalog', 'information_schema')";
 	}
 

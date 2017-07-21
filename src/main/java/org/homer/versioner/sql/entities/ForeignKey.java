@@ -30,14 +30,17 @@ public class ForeignKey {
 		destinationSchemaName = rs.getString(6);
 		destinationColumnName = rs.getString(7);
 
+		//TODO refactor don't load on init
 		sourceTable = findTable(database, sourceSchemaName, sourceTableName);
 		destinationTable = findTable(database, destinationSchemaName, destinationTableName);
 	}
 
-	private Optional<TableNode> findTable(DatabaseNode database, String schemaName, String tableName) {
+	//TODO refactor accept domain entities
+	private Optional<TableNode> findTable(DatabaseNode database, String schema, String table) {
 
-		return database.findSchema(schemaName)
-				.map(schema -> schema.findTable(tableName))
+		//TODO refactor search by equals on domain entities
+		return database.findSchema(schema)
+				.map(foundSchema -> foundSchema.findTable(table))
 				.orElse(Optional.empty());
 	}
 

@@ -3,17 +3,13 @@ package org.homer.versioner.sql.procedure;
 import org.homer.versioner.core.output.NodeOutput;
 import org.homer.versioner.sql.database.SQLDatabase;
 import org.homer.versioner.sql.database.SQLDatabaseFactory;
-import org.homer.versioner.sql.entities.DatabaseNode;
-import org.homer.versioner.sql.entities.ForeignKey;
-import org.homer.versioner.sql.entities.SchemaNode;
-import org.homer.versioner.sql.entities.TableNode;
-import org.neo4j.graphdb.*;
+import org.homer.versioner.sql.entities.*;
+import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.logging.Log;
 import org.neo4j.procedure.*;
 
-import java.sql.Connection;
-import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.List;
 import java.util.stream.Stream;
 
 /**
@@ -39,47 +35,40 @@ public class Init {
     ) throws SQLException {
 
         SQLDatabase sqlDatabase = SQLDatabaseFactory.getSQLDatabase(dbName);
+        sqlDatabase.connect(hostname, port, databaseName, username, password);
 
-        DatabaseNode database = new DatabaseNode(db.createNode(), databaseName);
+        DatabaseNode database = sqlDatabase.getDatabase(db);
 
-        try (Connection con = sqlDatabase.getConnection(hostname, port, databaseName, username, password)) {
-            try (ResultSet schemasRs = con.createStatement().executeQuery(sqlDatabase.getSchemaQuery())) {
-                while (schemasRs.next()) {
+        List<SchemaNode> schemas = sqlDatabase.getSchemas(db);
+        schemas.forEach(schema -> {
 
-                    SchemaNode schema = new SchemaNode(db.createNode(), schemasRs);
-                    database.addSchema(schema);
+            database.addSchema(schema);
 
-                    try (ResultSet tablesRs = con.createStatement().executeQuery(sqlDatabase.buildTablesQuery(schema.getName()))) {
-                        while (tablesRs.next()) {
+            List<TableNode> tables = sqlDatabase.getTables(schema);
+            tables.forEach(table -> {
 
-                            TableNode table = new TableNode(tablesRs);
+                List<TableColumn> columns = sqlDatabase.getColumns(schema, table);
+                columns.forEach(table::addColumn);
 
-                            try (ResultSet columnRs = con.createStatement().executeQuery(sqlDatabase.buildColumnsQuery(schema.getName(), table.getName()))) {
-                                while (columnRs.next()) {
-                                    table.addColumn(columnRs);
-                                }
-                            }
+                //TODO refactor
+                new org.homer.versioner.core.builders.InitBuilder().withDb(db).withLog(log).build()
+                        .map(init -> init.init("Table", table.getAttributes(), table.getProperties(), "", 0L))
+                        .flatMap(Stream::findAny)
+                        .map(tblNode -> db.getNodeById(tblNode.node.getId()))
+                        .ifPresent(table::setNode);
 
-                            new org.homer.versioner.core.builders.InitBuilder().withDb(db).withLog(log).build()
-                                    .map(init -> init.init("Table", table.getAttributes(), table.getProperties(), "", 0L))
-                                    .flatMap(Stream::findAny)
-                                    .map(tblNode -> db.getNodeById(tblNode.node.getId()))
-                                    .ifPresent(table::setNode);
+                schema.addTable(table);
+            });
+        });
 
-                            schema.addTable(table);
-                        }
-                    }
-                }
-            }
+        List<ForeignKey> foreignKeys = sqlDatabase.getForeignKeys(database);
+        foreignKeys.forEach(foreignKey ->
+                foreignKey.getSourceTable().ifPresent(sourceTable -> sourceTable.addForeignKey(foreignKey))
+        );
 
-            try (ResultSet foreignKeysRs = con.createStatement().executeQuery(sqlDatabase.getForeignKeysQuery())) {
-                while (foreignKeysRs.next()) {
+        sqlDatabase.disconnect();
 
-                    ForeignKey foreignKey = new ForeignKey(foreignKeysRs, database);
-                    foreignKey.getSourceTable().ifPresent(sourceTable -> sourceTable.addForeignKey(foreignKey));
-                }
-            }
-        }
+        //TODO call persistence unit to persist the whole database
 
         return Stream.of(new NodeOutput(database.getNode()));
     }
