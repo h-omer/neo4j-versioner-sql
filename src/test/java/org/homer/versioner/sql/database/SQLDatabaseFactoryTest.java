@@ -9,6 +9,6 @@ public class SQLDatabaseFactoryTest {
         String brandName = "postgres";
         SQLDatabase sqlDatabase = SQLDatabaseFactory.getSQLDatabase(brandName);
 
-        Assert.assertEquals(brandName, sqlDatabase.getDatabaseBrand());
+        Assert.assertEquals(brandName, sqlDatabase.getName());
     }
 }
