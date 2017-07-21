@@ -1,9 +1,8 @@
-package org.homer.versioner.sql.database;
+package org.homer.versioner.sql.importers;
 
 import org.homer.versioner.sql.entities.*;
-import org.homer.versioner.sql.exception.ConnectionException;
-import org.homer.versioner.sql.exception.DatabaseException;
-import org.neo4j.graphdb.GraphDatabaseService;
+import org.homer.versioner.sql.exceptions.ConnectionException;
+import org.homer.versioner.sql.exceptions.DatabaseException;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -13,20 +12,13 @@ import java.util.List;
 
 import static org.homer.versioner.sql.utils.Utils.newArrayList;
 
-public abstract class SQLDatabase {
+public abstract class DatabaseImporter {
 
     private String hostName;
     private Long port;
     private String databaseName;
 
     private Connection connection;
-
-    /**
-     * It returns the specific database name
-     *
-     * @return specific database name
-     */
-    public abstract String getName();
 
     private Connection getConnection(String username, String password) {
        String connectionUrl = String.format(getConnectionUrl(), hostName, port, databaseName);
@@ -37,8 +29,6 @@ public abstract class SQLDatabase {
         }
     }
 
-    protected abstract String getSchemaQuery();
-
     private String buildTablesQuery(String schema) {
         return String.format(getTablesQuery(), schema);
     }
@@ -47,23 +37,25 @@ public abstract class SQLDatabase {
         return String.format(getColumnsQuery(), schema, table);
     }
 
-    /**
-     * It returns the specific query {@link String} for foreign keys information
-     *
-     * @return specific foreign keys query String
-     */
-    public abstract String getForeignKeysQuery();
-
-
     protected abstract String getConnectionUrl();
+
+    protected abstract String getSchemaQuery();
 
     protected abstract String getTablesQuery();
 
     protected abstract String getColumnsQuery();
 
-    public DatabaseNode getDatabase(GraphDatabaseService db) {
-        //TODO will be called once in the init script on a persist logic unit
-        return new DatabaseNode(db.createNode(), databaseName);
+    protected abstract String getForeignKeysQuery();
+
+    /**
+     * It returns the specific database name
+     *
+     * @return specific database name
+     */
+    public abstract String getName();
+
+    public Database getDatabase() {
+        return new Database(databaseName);
     }
 
     public void connect(String hostname, Long port, String databaseName, String username, String password) {
@@ -81,12 +73,12 @@ public abstract class SQLDatabase {
         }
     }
 
-    public List<SchemaNode> getSchemas(GraphDatabaseService db) {
+    public List<Schema> getSchemas() {
 
         try (ResultSet schemasRs = connection.createStatement().executeQuery(getSchemaQuery())) {
-            List<SchemaNode> schemas = newArrayList();
+            List<Schema> schemas = newArrayList();
             while(schemasRs.next()){
-                schemas.add(new SchemaNode(db.createNode(), schemasRs));
+                schemas.add(new Schema(schemasRs));
             }
             return schemas;
         } catch (SQLException e) {
@@ -94,12 +86,12 @@ public abstract class SQLDatabase {
         }
     }
 
-    public List<TableNode> getTables(SchemaNode schema) {
+    public List<Table> getTables(Schema schema) {
 
         try(ResultSet tablesRs = connection.createStatement().executeQuery(buildTablesQuery(schema.getName()))){
-            List<TableNode> tables = newArrayList();
+            List<Table> tables = newArrayList();
             while(tablesRs.next()){
-                tables.add(new TableNode(tablesRs));
+                tables.add(new Table(tablesRs));
             }
             return tables;
         } catch (SQLException e) {
@@ -107,7 +99,7 @@ public abstract class SQLDatabase {
         }
     }
 
-    public List<TableColumn> getColumns(SchemaNode schema, TableNode table) {
+    public List<TableColumn> getColumns(Schema schema, Table table) {
 
         try(ResultSet columnsRs = connection.createStatement().executeQuery(buildColumnsQuery(schema.getName(), table.getName()))){
             List<TableColumn> columns = newArrayList();
@@ -120,12 +112,12 @@ public abstract class SQLDatabase {
         }
     }
 
-    //TODO remove database dependency
-    public List<ForeignKey> getForeignKeys(DatabaseNode database) {
+    public List<ForeignKey> getForeignKeys() {
+
         try(ResultSet foreignKeysRs = connection.createStatement().executeQuery(getForeignKeysQuery())){
             List<ForeignKey> foreignKeys = newArrayList();
             while(foreignKeysRs.next()){
-                foreignKeys.add(new ForeignKey(foreignKeysRs, database));
+                foreignKeys.add(new ForeignKey(foreignKeysRs));
             }
             return foreignKeys;
         } catch (SQLException e) {

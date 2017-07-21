@@ -1,4 +1,4 @@
-package org.homer.versioner.sql.exception;
+package org.homer.versioner.sql.exceptions;
 
 public class DatabaseNotFoundException extends RuntimeException {
     public DatabaseNotFoundException(String dbName) {

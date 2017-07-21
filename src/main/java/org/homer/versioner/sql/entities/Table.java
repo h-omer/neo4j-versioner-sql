@@ -1,10 +1,7 @@
 package org.homer.versioner.sql.entities;
 
 import lombok.Getter;
-import lombok.Setter;
-import org.neo4j.graphdb.Node;
-import org.neo4j.graphdb.Relationship;
-import org.neo4j.graphdb.RelationshipType;
+import lombok.ToString;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -15,29 +12,28 @@ import static org.homer.versioner.sql.utils.Utils.newArrayList;
 import static org.homer.versioner.sql.utils.Utils.newHashMap;
 
 @Getter
-public class TableNode {
+@ToString
+public class Table {
 
-	@Setter
-	private Node              node;
+	private Long 			  nodeId;
 	private String            name;
+
 	private List<TableColumn> columns;
 	private List<ForeignKey>  foreignKeys;
 
-	public TableNode(ResultSet rs) throws SQLException {
+	public Table(ResultSet rs) throws SQLException {
 
 		this.name = rs.getString(1);
 		this.columns = newArrayList();
 		this.foreignKeys = newArrayList();
 	}
 
-	public Map<String, Object> getAttributes() {
-
-		return newHashMap("name", name);
+	public void addColumn(TableColumn column) {
+	    columns.add(column);
 	}
 
-	public void addColumn(TableColumn column) {
-
-	    columns.add(column);
+	public Map<String, Object> getAttributes() {
+		return newHashMap("name", name);
 	}
 
 	public Map<String, Object> getProperties() {
@@ -48,12 +44,10 @@ public class TableNode {
 	}
 
 	public void addForeignKey(ForeignKey foreignKey) {
-
 		foreignKeys.add(foreignKey);
+	}
 
-		foreignKey.getDestinationTable().ifPresent(destinationTable -> {
-			Relationship relationship = node.createRelationshipTo(destinationTable.getNode(), RelationshipType.withName("RELATION"));
-			foreignKey.setRelationshipProperties(relationship);
-		});
+	public void setNodeId(Long nodeId) {
+		this.nodeId = nodeId;
 	}
 }

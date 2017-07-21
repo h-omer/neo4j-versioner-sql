@@ -1,6 +1,7 @@
 package org.homer.versioner.sql.entities;
 
 import lombok.Getter;
+import lombok.ToString;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -9,6 +10,7 @@ import java.util.List;
 import static org.homer.versioner.sql.utils.Utils.newArrayList;
 
 @Getter
+@ToString
 public class TableColumn {
 
 	private String       name;
@@ -24,7 +26,7 @@ public class TableColumn {
 		}
 	}
 
-	public String[] getAttributesAsArray() {
+	String[] getAttributesAsArray() {
 		return attributes.toArray(new String[attributes.size()]);
 	}
 }

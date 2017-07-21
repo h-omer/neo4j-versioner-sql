@@ -1,6 +1,6 @@
-package org.homer.versioner.sql.database;
+package org.homer.versioner.sql.importers;
 
-public class PostgresSQLDatabase extends SQLDatabase {
+public class PostgresDatabaseImporter extends DatabaseImporter {
 
 	@Override
 	public String getName() {

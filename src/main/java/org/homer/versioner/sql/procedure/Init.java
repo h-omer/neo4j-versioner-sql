@@ -1,14 +1,15 @@
 package org.homer.versioner.sql.procedure;
 
 import org.homer.versioner.core.output.NodeOutput;
-import org.homer.versioner.sql.database.SQLDatabase;
-import org.homer.versioner.sql.database.SQLDatabaseFactory;
 import org.homer.versioner.sql.entities.*;
+import org.homer.versioner.sql.importers.DatabaseImporter;
+import org.homer.versioner.sql.importers.DatabaseImporterFactory;
+import org.homer.versioner.sql.persistence.Neo4jPersistence;
 import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.Node;
 import org.neo4j.logging.Log;
 import org.neo4j.procedure.*;
 
-import java.sql.SQLException;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -31,46 +32,39 @@ public class Init {
             @Name("port") Long port,
             @Name("database") String databaseName,
             @Name("username") String username,
-            @Name("password") String password
-    ) throws SQLException {
+            @Name("password") String password){
 
-        SQLDatabase sqlDatabase = SQLDatabaseFactory.getSQLDatabase(dbName);
-        sqlDatabase.connect(hostname, port, databaseName, username, password);
+        DatabaseImporter databaseImporter = DatabaseImporterFactory.getSQLDatabase(dbName);
+        databaseImporter.connect(hostname, port, databaseName, username, password);
 
-        DatabaseNode database = sqlDatabase.getDatabase(db);
+        Database database = databaseImporter.getDatabase();
 
-        List<SchemaNode> schemas = sqlDatabase.getSchemas(db);
+        List<Schema> schemas = databaseImporter.getSchemas();
         schemas.forEach(schema -> {
 
             database.addSchema(schema);
 
-            List<TableNode> tables = sqlDatabase.getTables(schema);
+            List<Table> tables = databaseImporter.getTables(schema);
             tables.forEach(table -> {
 
-                List<TableColumn> columns = sqlDatabase.getColumns(schema, table);
-                columns.forEach(table::addColumn);
-
-                //TODO refactor
-                new org.homer.versioner.core.builders.InitBuilder().withDb(db).withLog(log).build()
-                        .map(init -> init.init("Table", table.getAttributes(), table.getProperties(), "", 0L))
-                        .flatMap(Stream::findAny)
-                        .map(tblNode -> db.getNodeById(tblNode.node.getId()))
-                        .ifPresent(table::setNode);
-
                 schema.addTable(table);
+
+                List<TableColumn> columns = databaseImporter.getColumns(schema, table);
+                columns.forEach(table::addColumn);
             });
         });
 
-        List<ForeignKey> foreignKeys = sqlDatabase.getForeignKeys(database);
+        List<ForeignKey> foreignKeys = databaseImporter.getForeignKeys();
         foreignKeys.forEach(foreignKey ->
-                foreignKey.getSourceTable().ifPresent(sourceTable -> sourceTable.addForeignKey(foreignKey))
+                foreignKey.getSourceTable(database).ifPresent(sourceTable -> sourceTable.addForeignKey(foreignKey))
         );
 
-        sqlDatabase.disconnect();
+        databaseImporter.disconnect();
 
-        //TODO call persistence unit to persist the whole database
+        Neo4jPersistence persistence = new Neo4jPersistence(db, log);
+        Node databaseNode = persistence.persist(database);
 
-        return Stream.of(new NodeOutput(database.getNode()));
+        return Stream.of(new NodeOutput(databaseNode));
     }
 
 }
