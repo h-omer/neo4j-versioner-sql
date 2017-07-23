@@ -8,6 +8,7 @@ import org.homer.versioner.sql.exceptions.DatabasePersistenceException;
 import org.neo4j.graphdb.*;
 import org.neo4j.logging.Log;
 
+import java.util.Optional;
 import java.util.stream.Stream;
 
 @AllArgsConstructor
@@ -43,6 +44,7 @@ public class Neo4jPersistence {
     }
 
     private Node persistSchema(Schema schema) {
+
         Node schemaNode = graphDb.createNode();
 
         schemaNode.addLabel(Label.label("Schema"));
@@ -75,20 +77,29 @@ public class Neo4jPersistence {
         database.getSchemas().forEach(schema ->
             schema.getTables().forEach(table -> {
 
-                Node sourceTableNode = graphDb.getNodeById(table.getNodeId());
+                Optional<Node> sourceTableNode = findStateNode(table.getNodeId());
 
                 table.getForeignKeys().forEach(foreignKey ->
                         foreignKey.getDestinationTable(database).ifPresent(destinationTable -> {
 
-                            Node destinationTableNode = graphDb.getNodeById(destinationTable.getNodeId());
+                            Optional<Node> destinationTableNode = findStateNode(destinationTable.getNodeId());
 
-                            Relationship relationship = sourceTableNode.createRelationshipTo(destinationTableNode, RelationshipType.withName("RELATION"));
-                            relationship.setProperty("constraint", foreignKey.getConstraintName());
-		                    relationship.setProperty("source_column", foreignKey.getSourceColumnName());
-		                    relationship.setProperty("destination_column", foreignKey.getDestinationColumnName());
+							if(sourceTableNode.isPresent() && destinationTableNode.isPresent()) {
+								Relationship relationship = sourceTableNode.get().createRelationshipTo(destinationTableNode.get(), RelationshipType.withName("RELATION"));
+								relationship.setProperty("constraint", foreignKey.getConstraintName());
+								relationship.setProperty("source_column", foreignKey.getSourceColumnName());
+								relationship.setProperty("destination_column", foreignKey.getDestinationColumnName());
+							}
                         })
                 );
             })
         );
     }
+
+	private Optional<Node> findStateNode(Long nodeId) {
+
+		return new org.homer.versioner.core.builders.GetBuilder().build().flatMap(get ->
+				get.getCurrentState(graphDb.getNodeById(nodeId)).findFirst())
+				.map(nodeOutput -> nodeOutput.node);
+	}
 }
