@@ -2,10 +2,16 @@ package org.homer.versioner.sql.entities;
 
 import lombok.Getter;
 import lombok.ToString;
+import org.homer.versioner.core.output.NodeOutput;
+import org.neo4j.graphdb.Node;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.homer.versioner.sql.utils.Utils.newArrayList;
 
@@ -26,7 +32,20 @@ public class TableColumn {
 		}
 	}
 
+	public TableColumn(String name, Object attributes) {
+
+		this.name = name;
+		this.attributes = Arrays.asList((String[]) attributes);
+	}
+
 	String[] getAttributesAsArray() {
 		return attributes.toArray(new String[attributes.size()]);
+	}
+
+	public static List<TableColumn> build(Node stateNode) {
+
+		return stateNode.getAllProperties().entrySet().stream()
+				.map(property -> new TableColumn(property.getKey(), property.getValue()))
+				.collect(Collectors.toList());
 	}
 }

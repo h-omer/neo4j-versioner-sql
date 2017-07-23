@@ -6,4 +6,8 @@ public class DatabaseException extends RuntimeException {
     public DatabaseException(SQLException e) {
         super(e);
     }
+
+    public DatabaseException(String s) {
+        super(s);
+    }
 }

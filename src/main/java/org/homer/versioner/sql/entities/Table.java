@@ -1,7 +1,9 @@
 package org.homer.versioner.sql.entities;
 
 import lombok.Getter;
+import lombok.Setter;
 import lombok.ToString;
+import org.neo4j.graphdb.Node;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -18,14 +20,20 @@ public class Table {
 	private Long 			  nodeId;
 	private String            name;
 
-	private List<TableColumn> columns;
-	private List<ForeignKey>  foreignKeys;
+	@Setter
+	private List<TableColumn> columns = newArrayList();
+	@Setter
+	private List<ForeignKey>  foreignKeys = newArrayList();
 
 	public Table(ResultSet rs) throws SQLException {
 
 		this.name = rs.getString(1);
-		this.columns = newArrayList();
-		this.foreignKeys = newArrayList();
+	}
+
+	public Table(Node node) {
+
+		this.name = (String) node.getProperty("name");
+		this.nodeId = node.getId();
 	}
 
 	public void addColumn(TableColumn column) {

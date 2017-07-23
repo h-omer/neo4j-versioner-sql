@@ -1,7 +1,9 @@
 package org.homer.versioner.sql.entities;
 
 import lombok.Getter;
+import lombok.Setter;
 import org.apache.commons.lang3.StringUtils;
+import org.neo4j.graphdb.Node;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -13,15 +15,21 @@ import static org.homer.versioner.sql.utils.Utils.newArrayList;
 @Getter
 public class Schema {
 
+	@Setter
 	private Long 		nodeId;
 	private String      name;
 
-	private List<Table> tables;
+	private List<Table> tables = newArrayList();
 
 	public Schema(ResultSet rs) throws SQLException {
 
 		this.name = rs.getString(1);
-		tables = newArrayList();
+	}
+
+	public Schema(Node node) {
+
+		this.name = (String) node.getProperty("name");
+		this.nodeId = node.getId();
 	}
 
 	public void addTable(Table table) {
@@ -33,9 +41,5 @@ public class Schema {
 		return tables.stream()
 				.filter(table -> StringUtils.equals(table.getName(), sourceTableName))
 				.findFirst();
-	}
-
-	public void setNodeId(Long nodeId) {
-		this.nodeId = nodeId;
 	}
 }
