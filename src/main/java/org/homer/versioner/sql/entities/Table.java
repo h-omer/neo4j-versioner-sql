@@ -15,7 +15,7 @@ import static org.homer.versioner.sql.utils.Utils.newHashMap;
 
 @Getter
 @ToString
-public class Table {
+public class Table implements Versioned, Persisted {
 
 	private Long 			  nodeId;
 	private String            name;
@@ -49,6 +49,10 @@ public class Table {
 		Map<String, Object> result = newHashMap();
 		columns.forEach((column) -> result.put(column.getName(), column.getAttributesAsArray()));
 		return result;
+	}
+
+	@Override public String getLabel() {
+		return "Table";
 	}
 
 	public void addForeignKey(ForeignKey foreignKey) {

@@ -1,21 +1,23 @@
 package org.homer.versioner.sql.persistence;
 
-import lombok.AllArgsConstructor;
-import org.homer.versioner.sql.entities.Database;
-import org.homer.versioner.sql.entities.Schema;
-import org.homer.versioner.sql.entities.Table;
-import org.homer.versioner.sql.exceptions.DatabasePersistenceException;
+import org.homer.versioner.sql.entities.*;
 import org.neo4j.graphdb.*;
 import org.neo4j.logging.Log;
 
 import java.util.Optional;
-import java.util.stream.Stream;
 
-@AllArgsConstructor
 public class Neo4jPersistence {
 
     private GraphDatabaseService graphDb;
     private Log log;
+	private Neo4jVersionerCore neo4jVersionerCore;
+
+	public Neo4jPersistence(GraphDatabaseService graphDb, Log log) {
+
+		this.graphDb = graphDb;
+		this.log = log;
+		this.neo4jVersionerCore = new Neo4jVersionerCore(graphDb, log);
+	}
 
     public Node persist(Database database) {
 
@@ -28,16 +30,14 @@ public class Neo4jPersistence {
 
     private Node persistDatabase(Database database){
 
-        Node databaseNode = graphDb.createNode();
-
-        databaseNode.addLabel(Label.label("Database"));
-		databaseNode.setProperty("name", database.getName());
-		databaseNode.setProperty("databaseType", database.getDatabaseType());
+        Node databaseNode = neo4jVersionerCore.createVersionedNode(database);
 
 		database.setNodeId(databaseNode.getId());
+		neo4jVersionerCore.updateVersionedNode(database.getNodeId(), database); //FIXME remove when empty state on init
 
 		database.getSchemas().forEach(schema ->
-                databaseNode.createRelationshipTo(persistSchema(schema), RelationshipType.withName("HAS_SCHEMA"))
+				neo4jVersionerCore.findStateNode(database).map(databaseStateNode ->
+						databaseStateNode.createRelationshipTo(persistSchema(schema), RelationshipType.withName("HAS_SCHEMA")))
         );
 
 		return databaseNode;
@@ -45,15 +45,14 @@ public class Neo4jPersistence {
 
     private Node persistSchema(Schema schema) {
 
-        Node schemaNode = graphDb.createNode();
-
-        schemaNode.addLabel(Label.label("Schema"));
-		schemaNode.setProperty("name", schema.getName());
+        Node schemaNode = neo4jVersionerCore.createVersionedNode(schema);
 
 		schema.setNodeId(schemaNode.getId());
+		neo4jVersionerCore.updateVersionedNode(schema.getNodeId(), schema); //FIXME remove when empty state on init
 
         schema.getTables().forEach(table ->
-            schemaNode.createRelationshipTo(persistTable(table), RelationshipType.withName("HAS_TABLE"))
+				neo4jVersionerCore.findStateNode(schema).map(schemaStateNode ->
+            			schemaStateNode.createRelationshipTo(persistTable(table), RelationshipType.withName("HAS_TABLE")))
         );
 
         return schemaNode;
@@ -61,11 +60,7 @@ public class Neo4jPersistence {
 
     private Node persistTable(Table table) {
 
-        Node tableNode = new org.homer.versioner.core.builders.InitBuilder().withDb(graphDb).withLog(log).build()
-                .map(init -> init.init("Table", table.getAttributes(), table.getProperties(), "", 0L))
-                .flatMap(Stream::findFirst)
-                .map(node -> node.node)
-                .orElseThrow(() -> new DatabasePersistenceException("Cannot persist table " + table));
+        Node tableNode = neo4jVersionerCore.createVersionedNode(table);
 
         table.setNodeId(tableNode.getId());
 
@@ -77,12 +72,12 @@ public class Neo4jPersistence {
         database.getSchemas().forEach(schema ->
             schema.getTables().forEach(table -> {
 
-                Optional<Node> sourceTableNode = findStateNode(table.getNodeId());
+                Optional<Node> sourceTableNode = neo4jVersionerCore.findStateNode(table);
 
                 table.getForeignKeys().forEach(foreignKey ->
                         foreignKey.getDestinationTable(database).ifPresent(destinationTable -> {
 
-                            Optional<Node> destinationTableNode = findStateNode(destinationTable.getNodeId());
+                            Optional<Node> destinationTableNode = neo4jVersionerCore.findStateNode(destinationTable);
 
 							if(sourceTableNode.isPresent() && destinationTableNode.isPresent()) {
 								Relationship relationship = sourceTableNode.get().createRelationshipTo(destinationTableNode.get(), RelationshipType.withName("RELATION"));
@@ -95,11 +90,4 @@ public class Neo4jPersistence {
             })
         );
     }
-
-	private Optional<Node> findStateNode(Long nodeId) {
-
-		return new org.homer.versioner.core.builders.GetBuilder().build().flatMap(get ->
-				get.getCurrentState(graphDb.getNodeById(nodeId)).findFirst())
-				.map(nodeOutput -> nodeOutput.node);
-	}
 }

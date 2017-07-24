@@ -15,6 +15,13 @@ public class Utils {
 		return map;
 	}
 
+	public static <T, K> Map<T, K> newHashMap(T key, K value, T key2, K value2){
+
+		Map<T, K> map = newHashMap(key, value);
+		map.put(key2, value2);
+		return map;
+	}
+
 	public static <T> List<T> newArrayList() {
 		return new ArrayList<>();
 	}
