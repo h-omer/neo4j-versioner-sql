@@ -11,7 +11,7 @@ public class DatabaseImporterFactory {
 	private static List<DatabaseImporter> REGISTERED_DATABASES;
 
 	static {
-		REGISTERED_DATABASES = asList(new PostgresDatabaseImporter());
+		REGISTERED_DATABASES = asList(new PostgresDatabaseImporter(), new MySQLDatabaseImporter());
 	}
 
 	public static DatabaseImporter getSQLDatabase(String name) {
