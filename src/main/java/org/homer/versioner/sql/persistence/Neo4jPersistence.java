@@ -33,7 +33,6 @@ public class Neo4jPersistence {
         Node databaseNode = neo4jVersionerCore.createVersionedNode(database);
 
 		database.setNodeId(databaseNode.getId());
-		neo4jVersionerCore.updateVersionedNode(database.getNodeId(), database); //FIXME remove when empty state on init
 
 		database.getSchemas().forEach(schema ->
 				neo4jVersionerCore.findStateNode(database).map(databaseStateNode ->
@@ -48,7 +47,6 @@ public class Neo4jPersistence {
         Node schemaNode = neo4jVersionerCore.createVersionedNode(schema);
 
 		schema.setNodeId(schemaNode.getId());
-		neo4jVersionerCore.updateVersionedNode(schema.getNodeId(), schema); //FIXME remove when empty state on init
 
         schema.getTables().forEach(table ->
 				neo4jVersionerCore.findStateNode(schema).map(schemaStateNode ->
