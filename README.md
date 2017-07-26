@@ -17,3 +17,7 @@ Apache License 2.0
 ## About
 
 Neo4j Versioner SQL has been developed by [Alberto D'Este](https://github.com/albertodeste) and [Marco Falcier](https://github.com/mfalcier).
+
+It's based on the following data model: 
+
+![Data Model](https://raw.githubusercontent.com/h-omer/neo4j-versioner-sql/master/docs/images/data-model.png)
