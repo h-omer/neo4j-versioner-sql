@@ -1,4 +1,4 @@
-package org.homer.versioner.sql.entities;
+package org.homer.versioner.sql.model.structure;
 
 public interface Persisted {
 

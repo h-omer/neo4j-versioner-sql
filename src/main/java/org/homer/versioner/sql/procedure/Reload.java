@@ -1,15 +1,17 @@
 package org.homer.versioner.sql.procedure;
 
 import org.homer.versioner.core.output.NodeOutput;
-import org.homer.versioner.sql.entities.*;
 import org.homer.versioner.sql.importers.DatabaseImporter;
 import org.homer.versioner.sql.importers.DatabaseImporterFactory;
+import org.homer.versioner.sql.model.Action;
+import org.homer.versioner.sql.model.structure.*;
 import org.homer.versioner.sql.persistence.Neo4jLoader;
+import org.homer.versioner.sql.persistence.Neo4jPersistence;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.logging.Log;
 import org.neo4j.procedure.*;
 
-import java.util.List;
+import java.util.Optional;
 import java.util.stream.Stream;
 
 public class Reload {
@@ -28,48 +30,37 @@ public class Reload {
 			@Name("username") String username,
 			@Name("password") String password) {
 
-		Neo4jLoader neo4jLoader = new Neo4jLoader(db);
+		Neo4jLoader neo4jLoader = new Neo4jLoader(db, log);
 
-		Database database = neo4jLoader.loadDatabase();
+		Database existingDatabase = neo4jLoader.loadDatabase();
 
-		DatabaseImporter databaseImporter = DatabaseImporterFactory.getSQLDatabase(database.getDatabaseType());
-		databaseImporter.connect(hostname, port, database.getName(), username, password);
+		DatabaseImporter databaseImporter = DatabaseImporterFactory.getSQLDatabase(existingDatabase.getDatabaseType());
+		databaseImporter.connect(hostname, port, existingDatabase.getName(), username, password);
 
-		neo4jLoader.loadSchemas(database).forEach(schema -> {
-			database.addSchema(schema);
+		neo4jLoader.loadSchemas(existingDatabase).forEach(schema -> {
+			existingDatabase.addSchema(schema);
 			neo4jLoader.loadTables(schema).forEach(schema::addTable);
 		});
 
-		List<Schema> schemas = databaseImporter.getSchemas();
-		schemas.forEach(schema -> {
+		Database database = Init.loadDatabaseFromDBMS(databaseImporter);
 
-		});
+		databaseImporter.disconnect();
 
-		//TODO reuse loader of method init
-		Database existingDatabase = databaseImporter.getDatabase();
+		Neo4jPersistence persistence = new Neo4jPersistence(db, log);
 
-		List<Schema> existingSchemas = databaseImporter.getSchemas();
-		existingSchemas.forEach(schema -> {
-
-			existingDatabase.addSchema(schema);
-
-			List<Table> tables = databaseImporter.getTables(schema);
-			tables.forEach(table -> {
-
-				schema.addTable(table);
-
-				List<TableColumn> columns = databaseImporter.getColumns(schema, table);
-				columns.forEach(table::addColumn);
+		//TODO calculate deleted tables from current DBMS
+		//TODO calculate diffs between foreign keys (detect new table nodes and re elaborate foreign keys)
+		//Process database diffs and persist
+		database.getSchemas().forEach(schema -> {
+			schema.getTables().forEach(table -> {
+				Action<Table, Schema> diffTable = DiffManager.getDiffs(table, schema, existingDatabase, log);
+				persistence.persist(diffTable);
 			});
+
+			Action<Schema, Database> diffSchema = DiffManager.getDiffs(schema, existingDatabase);
+			persistence.persist(diffSchema);
 		});
 
-		List<ForeignKey> foreignKeys = databaseImporter.getForeignKeys();
-		foreignKeys.forEach(foreignKey ->
-				foreignKey.getSourceTable(database).ifPresent(sourceTable -> sourceTable.addForeignKey(foreignKey))
-		);
-
-		//TODO manage diff of states and add new states
-
-		return Stream.of(new NodeOutput(db.getNodeById(database.getNodeId())));
+		return Stream.of(new NodeOutput(db.getNodeById(existingDatabase.getNodeId())));
 	}
 }

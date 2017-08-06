@@ -1,8 +1,9 @@
-package org.homer.versioner.sql.entities;
+package org.homer.versioner.sql.model.structure;
 
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.ToString;
-import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
 
 import java.sql.ResultSet;
@@ -11,6 +12,8 @@ import java.util.Optional;
 
 @Getter
 @ToString
+@Builder
+@AllArgsConstructor
 public class ForeignKey {
 
 	private final String constraintName;

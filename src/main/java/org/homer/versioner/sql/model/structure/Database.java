@@ -1,8 +1,11 @@
-package org.homer.versioner.sql.entities;
+package org.homer.versioner.sql.model.structure;
 
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 import org.apache.commons.lang3.StringUtils;
+import org.homer.versioner.sql.model.Versioned;
 import org.neo4j.graphdb.Node;
 
 import java.util.List;
@@ -13,7 +16,9 @@ import static org.homer.versioner.sql.utils.Utils.newArrayList;
 import static org.homer.versioner.sql.utils.Utils.newHashMap;
 
 @Getter
-public class Database implements Versioned, Persisted {
+@Builder
+@AllArgsConstructor
+public class Database implements Versioned {
 
 	@Setter
 	private Long 			nodeId;

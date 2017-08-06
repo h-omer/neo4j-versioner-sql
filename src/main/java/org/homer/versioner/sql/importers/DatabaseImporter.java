@@ -1,8 +1,8 @@
 package org.homer.versioner.sql.importers;
 
-import org.homer.versioner.sql.entities.*;
 import org.homer.versioner.sql.exceptions.ConnectionException;
 import org.homer.versioner.sql.exceptions.DatabaseException;
+import org.homer.versioner.sql.model.structure.*;
 
 import java.sql.Connection;
 import java.sql.DriverManager;

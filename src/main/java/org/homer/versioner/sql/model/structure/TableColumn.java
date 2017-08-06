@@ -1,22 +1,24 @@
-package org.homer.versioner.sql.entities;
+package org.homer.versioner.sql.model.structure;
 
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.ToString;
-import org.homer.versioner.core.output.NodeOutput;
 import org.neo4j.graphdb.Node;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static org.homer.versioner.sql.utils.Utils.newArrayList;
+import static org.homer.versioner.sql.utils.Utils.nullSafeEquals;
 
 @Getter
 @ToString
+@Builder
+@AllArgsConstructor
 public class TableColumn {
 
 	private String       name;
@@ -47,5 +49,19 @@ public class TableColumn {
 		return stateNode.getAllProperties().entrySet().stream()
 				.map(property -> new TableColumn(property.getKey(), property.getValue()))
 				.collect(Collectors.toList());
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+
+		if(!(obj instanceof TableColumn)) {
+			return false;
+		}
+
+		TableColumn tableColumn = (TableColumn) obj;
+
+		return nullSafeEquals(this.name, tableColumn.name) &&
+				tableColumn.attributes.containsAll(this.attributes) &&
+				this.attributes.containsAll(tableColumn.attributes);
 	}
 }

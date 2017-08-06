@@ -1,9 +1,9 @@
 package org.homer.versioner.sql.procedure;
 
 import org.homer.versioner.core.output.NodeOutput;
-import org.homer.versioner.sql.entities.*;
 import org.homer.versioner.sql.importers.DatabaseImporter;
 import org.homer.versioner.sql.importers.DatabaseImporterFactory;
+import org.homer.versioner.sql.model.structure.*;
 import org.homer.versioner.sql.persistence.Neo4jPersistence;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
@@ -37,13 +37,24 @@ public class Init {
         DatabaseImporter databaseImporter = DatabaseImporterFactory.getSQLDatabase(dbName);
         databaseImporter.connect(hostname, port, databaseName, username, password);
 
+        Database database = loadDatabaseFromDBMS(databaseImporter);
+
+        databaseImporter.disconnect();
+
+        Neo4jPersistence persistence = new Neo4jPersistence(db, log);
+        Node databaseNode = persistence.persist(database);
+
+        return Stream.of(new NodeOutput(databaseNode));
+    }
+
+    public static Database loadDatabaseFromDBMS(DatabaseImporter databaseImporter) {
+
         Database database = databaseImporter.getDatabase();
 
         List<Schema> schemas = databaseImporter.getSchemas();
         schemas.forEach(schema -> {
 
             database.addSchema(schema);
-
             List<Table> tables = databaseImporter.getTables(schema);
             tables.forEach(table -> {
 
@@ -59,12 +70,7 @@ public class Init {
                 foreignKey.getSourceTable(database).ifPresent(sourceTable -> sourceTable.addForeignKey(foreignKey))
         );
 
-        databaseImporter.disconnect();
-
-        Neo4jPersistence persistence = new Neo4jPersistence(db, log);
-        Node databaseNode = persistence.persist(database);
-
-        return Stream.of(new NodeOutput(databaseNode));
+        return database;
     }
 
 }
