@@ -19,7 +19,7 @@ dependencies {
     testCompile group: 'org.mockito', name: 'mockito-core', version: '2.8.47'
     testCompile group: 'org.assertj', name: 'assertj-core', version: '3.8.0'
 
-    compile group: 'org.neo4j', name: 'neo4j', version:'3.2.2'
+    compile group: 'org.neo4j', name: 'neo4j', version:'3.2.3'
     compile group: 'com.github.h-omer', name: 'neo4j-versioner-core', version: '1.2.0'
     //compile fileTree(dir: 'libs', include: 'neo4j-versioner-core-1.2.0.jar')
     compile group: 'org.projectlombok', name: 'lombok', version: '1.16.16'
