@@ -69,11 +69,11 @@ public class InitIntegrationTest {
 	public void shouldInitCorrectlyTheGraph() throws SQLException {
 
 		initMocks(mockedDatabaseImporter,
-				FULLDATABASE.DATABASE,
-				FULLDATABASE.SCHEMAS,
-				FULLDATABASE.TABLES,
-				FULLDATABASE.TABLES_COLUMNS,
-				FULLDATABASE.FOREIGN_KEYS);
+				FULLDATABASE.DATABASE(),
+				FULLDATABASE.SCHEMAS(),
+				FULLDATABASE.TABLES(),
+				FULLDATABASE.TABLES_COLUMNS(),
+				FULLDATABASE.FOREIGN_KEYS());
 
 		neo4j.getGraphDatabaseService().execute("CALL sql.versioner.init('" + MOCKED_DATABASE_NAME + "', '', 0, '', '', '')");
 

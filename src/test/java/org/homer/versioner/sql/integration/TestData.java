@@ -23,61 +23,57 @@ public class TestData {
 	public static final String MOCKED_DATABASE_NAME = "TEST_DATABASE";
 
 	public static class FULLDATABASE {
-		public static List<ForeignKey> FOREIGN_KEYS;
-		public static Map<String, List<TableColumn>> TABLES_COLUMNS;
-		public static List<Table> TABLES;
-		public static List<Schema> SCHEMAS;
-		public static Database DATABASE;
+		public static List<ForeignKey> FOREIGN_KEYS() throws SQLException {
+			return newArrayList(
+					ForeignKey.builder().sourceTableName("testTable2").destinationTableName("testTable1").sourceColumnName("testTable2Column2").destinationColumnName("testTable1Column1").sourceSchemaName("testSchema").destinationSchemaName("testSchema")
+							.constraintName("testConstraintName").build());
+		}
 
-		static {
-			try {
-				FOREIGN_KEYS = newArrayList(
-						ForeignKey.builder().sourceTableName("testTable2").destinationTableName("testTable1").sourceColumnName("testTable2Column2").destinationColumnName("testTable1Column1").sourceSchemaName("testSchema").destinationSchemaName("testSchema")
-								.constraintName("testConstraintName").build());
+		public static Map<String, List<TableColumn>> TABLES_COLUMNS() throws SQLException {
+			return newHashMap("testTable1", newArrayList(TableColumn.builder()
+							.name("testTable1Column1")
+							.attributes(newArrayList("PRIMARY KEY", "NOT NULL"))
+							.build()),
+					"testTable2", newArrayList(
+							TableColumn.builder()
+									.name("testTable2Column1")
+									.attributes(newArrayList("PRIMARY KEY", "NOT NULL"))
+									.build(),
+							TableColumn.builder()
+									.name("testTable2Column2")
+									.attributes(newArrayList("NOT NULL"))
+									.build()
+					));
+		}
 
-				TABLES_COLUMNS = newHashMap("testTable1", newArrayList(TableColumn.builder()
-						.name("testTable1Column1")
-						.attributes(newArrayList("PRIMARY KEY", "NOT NULL"))
-						.build()),
-						"testTable2", newArrayList(
-								TableColumn.builder()
-										.name("testTable2Column1")
-										.attributes(newArrayList("PRIMARY KEY", "NOT NULL"))
-										.build(),
-								TableColumn.builder()
-										.name("testTable2Column2")
-										.attributes(newArrayList("NOT NULL"))
-										.build()
-						));
+		public static List<Table> TABLES() throws SQLException {
+			return newArrayList(
+					Table.builder()
+							.name("testTable1")
+							.foreignKeys(newArrayList())
+							.columns(newArrayList())
+							.build(),
+					Table.builder()
+							.name("testTable2")
+							.foreignKeys(newArrayList())
+							.columns(newArrayList())
+							.build());
+		}
 
-				TABLES = newArrayList(
-						Table.builder()
-								.name("testTable1")
-								.foreignKeys(newArrayList())
-								.columns(newArrayList())
-								.build(),
-						Table.builder()
-								.name("testTable2")
-								.foreignKeys(newArrayList())
-								.columns(newArrayList())
-								.build()
-				);
+		public static List<Schema> SCHEMAS() throws SQLException {
+			return newArrayList(Schema.builder()
+					.name("testSchema")
+					.tables(newArrayList())
+					.build()
+			);
+		}
 
-				SCHEMAS = newArrayList(Schema.builder()
-						.name("testSchema")
-						.tables(newArrayList())
-						.build()
-				);
-
-				DATABASE = Database.builder()
-						.databaseType(MOCKED_DATABASE_NAME)
-						.name("testDatabase")
-						.schemas(newArrayList())
-						.build();
-
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
+		public static Database DATABASE() {
+			return Database.builder()
+					.databaseType(MOCKED_DATABASE_NAME)
+					.name("testDatabase")
+					.schemas(newArrayList())
+					.build();
 		}
 	}
 

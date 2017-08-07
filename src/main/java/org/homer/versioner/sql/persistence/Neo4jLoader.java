@@ -56,7 +56,7 @@ public class Neo4jLoader {
 		if(schemaNode.isPresent()) {
 			List<Table> tables = StreamSupport.stream(schemaNode.get().getRelationships(Direction.OUTGOING, RelationshipType.withName("HAS_TABLE")).spliterator(), false)
 					.map(Relationship::getEndNode)
-					.filter(node -> node.hasLabel(Label.label("Schema")))
+					.filter(node -> node.hasLabel(Label.label("Table")))
 					.map(Table::new)
 					.collect(Collectors.toList());
 

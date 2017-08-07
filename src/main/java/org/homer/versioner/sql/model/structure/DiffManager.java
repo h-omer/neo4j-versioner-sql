@@ -1,36 +1,37 @@
 package org.homer.versioner.sql.model.structure;
 
-import org.homer.versioner.sql.model.Action;
+import org.homer.versioner.sql.model.action.SchemaAction;
+import org.homer.versioner.sql.model.action.TableAction;
 import org.neo4j.logging.Log;
 
 import java.util.Optional;
 
 public class DiffManager {
 
-	public static Action<Table, Schema> getDiffs(Table table, Schema schema, Database existingDatabase, Log log) {
+	public static TableAction getDiffs(Table table, Schema schema, Database existingDatabase, Log log) {
 
 		Optional<Schema> existingSchemaOpt = existingDatabase.findSchema(schema.getName());
 		Optional<Table> existingTableOpt = existingSchemaOpt.flatMap(existingSchema -> existingSchema.findTable(table.getName()));
 
 		if (!existingTableOpt.isPresent()) {
-			return Action.create(table, existingSchemaOpt);
+			return TableAction.create(table, existingSchemaOpt);
 		} else if (!existingTableOpt.get().equals(table)) {
-			return Action.update(table, existingSchemaOpt);
+			return TableAction.update(table, existingSchemaOpt);
 		}
 
-		return Action.noAction(table);
+		return TableAction.noAction(table);
 	}
 
-	public static Action<Schema, Database> getDiffs(Schema schema, Database existingDatabase) {
+	public static SchemaAction getDiffs(Schema schema, Database existingDatabase) {
 
 		Optional<Schema> existingSchemaOpt = existingDatabase.findSchema(schema.getName());
 
 		if (!existingSchemaOpt.isPresent()) {
-			return Action.create(schema, Optional.of(existingDatabase));
+			return SchemaAction.create(schema, Optional.of(existingDatabase));
 		} else if (!existingSchemaOpt.get().equals(schema)) {
-			return Action.update(schema, Optional.of(existingDatabase));
+			return SchemaAction.update(schema, Optional.of(existingDatabase));
 		}
 
-		return Action.noAction(schema);
+		return SchemaAction.noAction(schema);
 	}
 }

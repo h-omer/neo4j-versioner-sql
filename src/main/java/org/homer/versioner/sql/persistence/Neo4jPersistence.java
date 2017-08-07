@@ -1,16 +1,19 @@
 package org.homer.versioner.sql.persistence;
 
-import org.homer.versioner.sql.model.Action;
-import org.homer.versioner.sql.model.ActionType;
-import org.homer.versioner.sql.model.Versioned;
+import org.homer.versioner.sql.model.action.ActionType;
+import org.homer.versioner.sql.model.action.SchemaAction;
+import org.homer.versioner.sql.model.action.TableAction;
 import org.homer.versioner.sql.model.structure.Database;
 import org.homer.versioner.sql.model.structure.Schema;
 import org.homer.versioner.sql.model.structure.Table;
 import org.neo4j.graphdb.*;
 import org.neo4j.logging.Log;
 
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.StreamSupport;
 
+import static java.util.stream.Collectors.toList;
 import static org.homer.versioner.sql.utils.Utils.newArrayList;
 
 public class Neo4jPersistence {
@@ -96,6 +99,41 @@ public class Neo4jPersistence {
         );
     }
 
+	public void persist(TableAction action) {
+
+		if(action.is(ActionType.CREATE)){
+			Node newEntity = neo4jVersionerCore.createVersionedNode(action.getEntity());
+			action.getParentEntity().ifPresent(schemaState -> {
+
+				Optional<Node> previousParentStateOpt = neo4jVersionerCore.findStateNode(schemaState);
+				neo4jVersionerCore.updateVersionedNode(schemaState.getNodeId(), null);
+				Optional<Node> newParentStateOpt = neo4jVersionerCore.findStateNode(schemaState);
+				if (previousParentStateOpt.isPresent() && newParentStateOpt.isPresent()) {
+					List<Relationship> relationships = previousParentStateOpt.map(n ->
+							StreamSupport.stream(n.getRelationships(RelationshipType.withName("HAS_TABLE")).spliterator(), false).collect(toList()))
+							.orElse(newArrayList());
+					relationships.forEach(relationship -> {
+						Relationship newRelationship;
+						if (relationship.getStartNodeId() == previousParentStateOpt.get().getId()) {
+							newRelationship = newParentStateOpt.get().createRelationshipTo(relationship.getEndNode(), relationship.getType());
+						} else {
+							newRelationship = relationship.getEndNode().createRelationshipTo(newParentStateOpt.get(), relationship.getType());
+						}
+
+						relationship.getAllProperties().forEach(newRelationship::setProperty);
+					});
+				}
+
+				newParentStateOpt.ifPresent(newParentState -> newParentState.createRelationshipTo(newEntity, RelationshipType.withName("HAS_TABLE")));
+			});
+		}
+		//TODO implement UPDATE and DELETE
+	}
+
+	public void persist(SchemaAction action) {
+		//TODO implement
+	}
+	/*
 	//TODO process all the changes once at single persist() call
 	public void persist(Action<? extends Versioned, ? extends Versioned> action) {
 
@@ -140,4 +178,5 @@ public class Neo4jPersistence {
 			return "";
 		}
 	}
+	*/
 }

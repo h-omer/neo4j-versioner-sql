@@ -3,7 +3,8 @@ package org.homer.versioner.sql.procedure;
 import org.homer.versioner.core.output.NodeOutput;
 import org.homer.versioner.sql.importers.DatabaseImporter;
 import org.homer.versioner.sql.importers.DatabaseImporterFactory;
-import org.homer.versioner.sql.model.Action;
+import org.homer.versioner.sql.model.action.SchemaAction;
+import org.homer.versioner.sql.model.action.TableAction;
 import org.homer.versioner.sql.model.structure.*;
 import org.homer.versioner.sql.persistence.Neo4jLoader;
 import org.homer.versioner.sql.persistence.Neo4jPersistence;
@@ -11,7 +12,6 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.logging.Log;
 import org.neo4j.procedure.*;
 
-import java.util.Optional;
 import java.util.stream.Stream;
 
 public class Reload {
@@ -50,14 +50,15 @@ public class Reload {
 
 		//TODO calculate deleted tables from current DBMS
 		//TODO calculate diffs between foreign keys (detect new table nodes and re elaborate foreign keys)
+		//TODO group changes and apply them for each different node once
 		//Process database diffs and persist
 		database.getSchemas().forEach(schema -> {
 			schema.getTables().forEach(table -> {
-				Action<Table, Schema> diffTable = DiffManager.getDiffs(table, schema, existingDatabase, log);
+				TableAction diffTable = DiffManager.getDiffs(table, schema, existingDatabase, log);
 				persistence.persist(diffTable);
 			});
 
-			Action<Schema, Database> diffSchema = DiffManager.getDiffs(schema, existingDatabase);
+			SchemaAction diffSchema = DiffManager.getDiffs(schema, existingDatabase);
 			persistence.persist(diffSchema);
 		});
 
