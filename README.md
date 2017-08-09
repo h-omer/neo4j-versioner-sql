@@ -1,3 +1,6 @@
+[![Build Status](https://travis-ci.org/h-omer/neo4j-versioner-sql.svg?branch=master)](https://travis-ci.org/h-omer/neo4j-versioner-sql)
+[![Dependency Status](https://www.versioneye.com/user/projects/598afb930fb24f0051e92458/badge.svg?style=flat-square)](https://www.versioneye.com/user/projects/598afb930fb24f0051e92458)
+
 # Neo4j Versioner SQL
 
 Neo4j Versioner SQL is a collection of procedures, aimed to help developers to manage a SQL Database schema, through the Entity-State model applied to Neo4j.
