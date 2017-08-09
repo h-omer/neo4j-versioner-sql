@@ -14,9 +14,9 @@ public class DiffManager {
 		Optional<Table> existingTableOpt = existingSchemaOpt.flatMap(existingSchema -> existingSchema.findTable(table.getName()));
 
 		if (!existingTableOpt.isPresent()) {
-			return TableAction.create(enrich(table, existingDatabase), existingSchemaOpt);
+			return TableAction.create(table, existingSchemaOpt);
 		} else if (!existingTableOpt.get().equals(table)) {
-			return TableAction.update(enrich(table, existingDatabase), existingSchemaOpt);
+			return TableAction.update(table, existingSchemaOpt);
 		}
 
 		return TableAction.noAction(table);
@@ -33,17 +33,5 @@ public class DiffManager {
 		}
 
 		return SchemaAction.noAction(schema);
-	}
-
-	private static Table enrich(Table table, Database existingDatabase) {
-
-		table.getForeignKeys().forEach(foreignKey -> {
-			Optional<Table> existingDestinationTableOpt = existingDatabase.findSchema(foreignKey.getDestinationSchemaName())
-					.flatMap(existingSchema -> existingSchema.findTable(foreignKey.getDestinationTableName()));
-
-			existingDestinationTableOpt.ifPresent(existingTable -> foreignKey.setDestinationTableId(existingTable.getNodeId()));
-		});
-
-		return table;
 	}
 }

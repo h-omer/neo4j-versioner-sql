@@ -1,20 +1,16 @@
 package org.homer.versioner.sql.persistence;
 
 import lombok.AllArgsConstructor;
-import org.homer.versioner.core.Utility;
 import org.homer.versioner.sql.model.structure.Persisted;
 import org.homer.versioner.sql.model.Versioned;
 import org.homer.versioner.sql.exceptions.DatabasePersistenceException;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
-import org.neo4j.graphdb.Relationship;
-import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.logging.Log;
 
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
 
 import static org.homer.versioner.sql.utils.Utils.newHashMap;
 
@@ -45,11 +41,5 @@ public class Neo4jVersionerCore {
 	public void updateVersionedNode(Long entityNodeId, Versioned newState) {
 		new org.homer.versioner.core.builders.UpdateBuilder().withDb(graphDb).withLog(log).build()
 				.map(update -> update.update(graphDb.getNodeById(entityNodeId), Objects.nonNull(newState) ? newState.getProperties() : newHashMap(), "", 0L));
-	}
-
-	public Optional<Node> getAssociatedEntity(Node node) {
-		return StreamSupport.stream(node.getRelationships(RelationshipType.withName(Utility.HAS_STATE_TYPE)).spliterator(), false)
-				.findFirst()
-				.map(Relationship::getStartNode);
 	}
 }

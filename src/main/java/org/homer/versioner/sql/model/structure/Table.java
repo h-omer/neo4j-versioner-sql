@@ -76,8 +76,6 @@ public class Table implements Versioned {
 
 		return nullSafeEquals(this.name, table.name) &&
 				table.columns.containsAll(this.columns) &&
-				this.columns.containsAll(table.columns) &&
-				table.foreignKeys.containsAll(this.foreignKeys) &&
-				this.foreignKeys.containsAll(table.foreignKeys);
+				this.columns.containsAll(table.columns);
 	}
 }

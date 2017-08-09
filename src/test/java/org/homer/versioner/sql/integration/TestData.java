@@ -25,15 +25,8 @@ public class TestData {
 	public static class FULLDATABASE {
 		public static List<ForeignKey> FOREIGN_KEYS() throws SQLException {
 			return newArrayList(
-					ForeignKey.builder()
-							.sourceTableName("testTable2")
-							.destinationTableName("testTable1")
-							.sourceColumnName("testTable2Column2")
-							.destinationColumnName("testTable1Column1")
-							.sourceSchemaName("testSchema")
-							.destinationSchemaName("testSchema")
-							.constraintName("testConstraintName")
-							.build());
+					ForeignKey.builder().sourceTableName("testTable2").destinationTableName("testTable1").sourceColumnName("testTable2Column2").destinationColumnName("testTable1Column1").sourceSchemaName("testSchema").destinationSchemaName("testSchema")
+							.constraintName("testConstraintName").build());
 		}
 
 		public static Map<String, List<TableColumn>> TABLES_COLUMNS() throws SQLException {

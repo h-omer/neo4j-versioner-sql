@@ -1,9 +1,6 @@
 package org.homer.versioner.sql.utils;
 
-import scala.collection.mutable.MultiMap;
-
 import java.util.*;
-import java.util.jar.Attributes;
 
 public class Utils {
 

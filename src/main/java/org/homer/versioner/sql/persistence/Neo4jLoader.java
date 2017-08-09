@@ -1,10 +1,8 @@
 package org.homer.versioner.sql.persistence;
 
 import lombok.AllArgsConstructor;
-import org.homer.versioner.core.Utility;
 import org.homer.versioner.core.builders.GetBuilder;
 import org.homer.versioner.sql.exceptions.DatabaseException;
-import org.homer.versioner.sql.exceptions.SQLVersionerException;
 import org.homer.versioner.sql.model.structure.*;
 import org.neo4j.graphdb.*;
 import org.neo4j.logging.Log;
@@ -12,7 +10,6 @@ import org.neo4j.logging.Log;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 import static org.homer.versioner.sql.utils.Utils.newArrayList;
@@ -86,33 +83,9 @@ public class Neo4jLoader {
 
 	private List<ForeignKey> getForeignKeys(Table table) {
 
-		Node tableNode = new GetBuilder().build()
-				.flatMap(get -> get.getCurrentState(graphDb.getNodeById(table.getNodeId())).findFirst())
-				.map(nodeOutput -> nodeOutput.node)
-				.map(node -> graphDb.getNodeById(node.getId()))
-				.orElseThrow(() -> new SQLVersionerException("Table node not found for node " + table.getNodeId()));
-
+		Node tableNode = graphDb.getNodeById(table.getNodeId());
 		return StreamSupport.stream(tableNode.getRelationships(Direction.OUTGOING, RelationshipType.withName("RELATION")).spliterator(), false)
-				.map(relationship -> {
-
-					Optional<Node> sourceTable = neo4jVersionerCore.getAssociatedEntity(relationship.getStartNode());
-
-					Optional<Node> sourceSchema = getAssociatedNode(sourceTable, RelationshipType.withName("HAS_TABLE"))
-							.flatMap(neo4jVersionerCore::getAssociatedEntity);
-
-					Optional<Node> destinationTable = neo4jVersionerCore.getAssociatedEntity(relationship.getEndNode());
-
-					Optional<Node> destinationSchema = getAssociatedNode(destinationTable, RelationshipType.withName("HAS_TABLE"))
-							.flatMap(neo4jVersionerCore::getAssociatedEntity);
-
-					return new ForeignKey(relationship, sourceSchema, sourceTable, destinationSchema, destinationTable);
-				})
+				.map(ForeignKey::new)
 				.collect(Collectors.toList());
-	}
-
-	private Optional<Node> getAssociatedNode(Optional<Node> nodeOpt, RelationshipType relationshipType) {
-		return nodeOpt
-				.flatMap(node -> StreamSupport.stream(node.getRelationships(relationshipType).spliterator(), false).findFirst())
-				.map(Relationship::getStartNode);
 	}
 }

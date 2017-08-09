@@ -49,6 +49,7 @@ public class Reload {
 		Neo4jPersistence persistence = new Neo4jPersistence(db, log);
 
 		//TODO calculate deleted tables from current DBMS
+		//TODO calculate diffs between foreign keys (detect new table nodes and re elaborate foreign keys)
 		//TODO group changes and apply them for each different node once
 		//Process database diffs and persist
 		database.getSchemas().forEach(schema -> {
