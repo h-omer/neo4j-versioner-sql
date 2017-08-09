@@ -11,7 +11,7 @@ Apache License 2.0
 1. Neo4j Versioner Core is required, please see the current documentation [here](https://h-omer.github.io/neo4j-versioner-core/);
 2. Download the latest [release](https://github.com/h-omer/neo4j-versioner-sql/releases);
 3. Put the downloaded jar file into `$NEO4J_HOME/plugins` folder;
-4. Put your database JDBC driver into `$NEO4J_HOME/plugins` folder, for more information on supported databases, click [here](currently-supported-databases); 
+4. Put your database JDBC driver into `$NEO4J_HOME/plugins` folder, for more information on supported databases, click [here](#currently-supported-databases); 
 5. Start/Restart Neo4j.
 
 ## About
@@ -132,3 +132,7 @@ node | Node
 ```cypher
 CALL sql.versioner.reload('localhost', 3306, 'root', 'password') YIELD node return node
 ```
+
+# Feedback
+
+We would appreciate your feedback about our Versioner SQL, how to improve and fix (we hope not so many!) any bad things. Say yours in the [issue](https://github.com/h-omer/neo4j-versioner-sql/issues) section.
