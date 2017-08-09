@@ -3,6 +3,7 @@ package org.homer.versioner.sql.integration;
 import org.homer.versioner.sql.importers.DatabaseImporter;
 import org.homer.versioner.sql.importers.DatabaseImporterFactory;
 import org.homer.versioner.sql.importers.PostgresDatabaseImporter;
+import org.homer.versioner.sql.model.structure.ForeignKey;
 import org.homer.versioner.sql.model.structure.Table;
 import org.homer.versioner.sql.model.structure.TableColumn;
 import org.homer.versioner.sql.persistence.Neo4jVersionerCore;
@@ -87,14 +88,24 @@ public class ReloadIntegrationTest {
 				.name("testTable3Column1")
 				.attributes(newArrayList("NOT NULL"))
 				.build()));
-		//TODO add relationship to table1
+
+		List<ForeignKey> newForeignKeys = FULLDATABASE.FOREIGN_KEYS();
+		newForeignKeys.add(ForeignKey.builder()
+				.sourceTableName("testTable3")
+				.destinationTableName("testTable1")
+				.sourceColumnName("testTable3Column1")
+				.destinationColumnName("testTable1Column1")
+				.sourceSchemaName("testSchema")
+				.destinationSchemaName("testSchema")
+				.constraintName("testConstraintName2")
+				.build());
 
 		initMocks(mockedDatabaseImporter,
 				FULLDATABASE.DATABASE(),
 				FULLDATABASE.SCHEMAS(),
 				newTables,
 				newTableColumns,
-				FULLDATABASE.FOREIGN_KEYS());
+				newForeignKeys);
 
 		neo4j.getGraphDatabaseService().execute("CALL sql.versioner.reload('', 0, '', '')");
 
@@ -118,7 +129,8 @@ public class ReloadIntegrationTest {
 		//Test foreign keys
 		assertForeignKeys(neo4j.getGraphDatabaseService(), neo4jVersionerCore,
 				newHashMap(
-						new Tuple2<>("testTable2Column2", "testTable1Column1"), newHashMap("constraint", "testConstraintName", "source_column", "testTable2Column2", "destination_column", "testTable1Column1")
+						new Tuple2<>("testTable2Column2", "testTable1Column1"), newHashMap("constraint", "testConstraintName", "source_column", "testTable2Column2", "destination_column", "testTable1Column1"),
+						new Tuple2<>("testTable3Column1", "testTable1Column1"), newHashMap("constraint", "testConstraintName2", "source_column", "testTable3Column1", "destination_column", "testTable1Column1")
 				));
 	}
 }

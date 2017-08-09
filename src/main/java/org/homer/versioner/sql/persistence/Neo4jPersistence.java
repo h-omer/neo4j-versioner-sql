@@ -103,80 +103,61 @@ public class Neo4jPersistence {
 
 		if(action.is(ActionType.CREATE)){
 			Node newEntity = neo4jVersionerCore.createVersionedNode(action.getEntity());
-			action.getParentEntity().ifPresent(schemaState -> {
+			Optional<Node> parentEntityStatusOpt = newStatusCloningCurrentOne(action.getParentEntity().map(a -> graphDb.getNodeById(a.getNodeId())), "HAS_TABLE");
 
-				Optional<Node> previousParentStateOpt = neo4jVersionerCore.findStateNode(schemaState);
-				neo4jVersionerCore.updateVersionedNode(schemaState.getNodeId(), null);
-				Optional<Node> newParentStateOpt = neo4jVersionerCore.findStateNode(schemaState);
-				if (previousParentStateOpt.isPresent() && newParentStateOpt.isPresent()) {
-					List<Relationship> relationships = previousParentStateOpt.map(n ->
-							StreamSupport.stream(n.getRelationships(RelationshipType.withName("HAS_TABLE")).spliterator(), false).collect(toList()))
-							.orElse(newArrayList());
-					relationships.forEach(relationship -> {
-						Relationship newRelationship;
-						if (relationship.getStartNodeId() == previousParentStateOpt.get().getId()) {
-							newRelationship = newParentStateOpt.get().createRelationshipTo(relationship.getEndNode(), relationship.getType());
-						} else {
-							newRelationship = relationship.getEndNode().createRelationshipTo(newParentStateOpt.get(), relationship.getType());
-						}
+			parentEntityStatusOpt.ifPresent(parentEntityStatus ->
+					parentEntityStatus.createRelationshipTo(newEntity, RelationshipType.withName("HAS_TABLE")));
 
-						relationship.getAllProperties().forEach(newRelationship::setProperty);
+			neo4jVersionerCore.findStateNode(newEntity.getId()).ifPresent(state -> {
+				action.getEntity().getForeignKeys().forEach(foreignKey -> {
+					Optional<Node> newDestinationTableStatusOpt = newStatusCloningCurrentOne(Optional.of(graphDb.getNodeById(foreignKey.getDestinationTableId())), "RELATION");
+					newDestinationTableStatusOpt.ifPresent(newDestinationTableStatus -> {
+						neo4jVersionerCore.findStateNode(newEntity.getId()).ifPresent(newEntityStatus -> {
+							Relationship relation = newEntityStatus.createRelationshipTo(newDestinationTableStatus, RelationshipType.withName("RELATION"));
+							relation.setProperty("constraint", foreignKey.getConstraintName());
+							relation.setProperty("source_column", foreignKey.getSourceColumnName());
+							relation.setProperty("destination_column", foreignKey.getDestinationColumnName());
+						});
 					});
-				}
-
-				newParentStateOpt.ifPresent(newParentState -> newParentState.createRelationshipTo(newEntity, RelationshipType.withName("HAS_TABLE")));
+				});
 			});
 		}
-		//TODO implement UPDATE and DELETE
+		//TODO implement UPDATE
+		//TODO implement DELETE
+	}
+
+	private Optional<Node> newStatusCloningCurrentOne(Optional<Node> entityOpt, String relationshipName) {
+
+		//TODO remove relations to nodes not CURRENT
+		Optional<Node> currentState = entityOpt.flatMap(entity -> neo4jVersionerCore.findStateNode(entity.getId()));
+		Optional<Node> newState = entityOpt.flatMap(entity -> {
+			neo4jVersionerCore.updateVersionedNode(entity.getId(), null);
+			return neo4jVersionerCore.findStateNode(entity.getId());
+		});
+
+		if (currentState.isPresent() && newState.isPresent()) {
+			List<Relationship> relationships = currentState.map(n ->
+					StreamSupport.stream(n.getRelationships(RelationshipType.withName(relationshipName)).spliterator(), false).collect(toList()))
+					.orElse(newArrayList());
+			relationships.forEach(relationship -> {
+				Relationship newRelationship;
+				if (relationship.getStartNodeId() == currentState.get().getId()) {
+					newRelationship = newState.get().createRelationshipTo(relationship.getEndNode(), relationship.getType());
+				} else {
+					newRelationship = relationship.getStartNode().createRelationshipTo(newState.get(), relationship.getType());
+				}
+
+				relationship.getAllProperties().forEach(newRelationship::setProperty);
+			});
+
+			currentState.get().getAllProperties().forEach((key, value) -> newState.get().setProperty(key, value));
+		}
+
+
+		return newState;
 	}
 
 	public void persist(SchemaAction action) {
 		//TODO implement
 	}
-	/*
-	//TODO process all the changes once at single persist() call
-	public void persist(Action<? extends Versioned, ? extends Versioned> action) {
-
-		if(action.is(ActionType.CREATE)) {
-
-			Node newEntity = neo4jVersionerCore.createVersionedNode(action.getEntity());
-			action.getParentEntity().ifPresent(parentEntity -> {
-
-				Optional<Node> previousParentStateOpt = neo4jVersionerCore.findStateNode(parentEntity);
-				neo4jVersionerCore.updateVersionedNode(parentEntity.getNodeId(), null);
-				Optional<Node> newParentStateOpt = neo4jVersionerCore.findStateNode(parentEntity);
-				//FIXME the relationships clone should not copy the versioner relationships
-				if(previousParentStateOpt.isPresent() && newParentStateOpt.isPresent()){
-					Iterable<Relationship> relationships = previousParentStateOpt.map(Node::getRelationships).orElse(newArrayList());
-					relationships.forEach(relationship -> {
-						Relationship newRelationship;
-						if(relationship.getStartNodeId() == previousParentStateOpt.get().getId()){
-							newRelationship = newParentStateOpt.get().createRelationshipTo(relationship.getEndNode(), relationship.getType());
-						} else {
-							newRelationship = relationship.getEndNode().createRelationshipTo(newParentStateOpt.get(), relationship.getType());
-						}
-
-						relationship.getAllProperties().forEach(newRelationship::setProperty);
-					});
-				}
-
-				newParentStateOpt.ifPresent(newParentState -> newParentState.createRelationshipTo(newEntity, RelationshipType.withName(getRelationshipTypeName(action))));
-			});
-		} else if(action.is(ActionType.UPDATE)) {
-			//TODO implement
-		} else if(action.is(ActionType.DELETE)) {
-			//TODO implement
-		}
-	}
-
-	private String getRelationshipTypeName(Action<?, ?> action) {
-		if(action.getParentEntity().isPresent() && action.getParentEntity().get() instanceof Database){
-			return "HAS_SCHEMA";
-		} else if(action.getParentEntity().isPresent() && action.getParentEntity().get() instanceof Schema) {
-			return "HAS_TABLE";
-		} else {
-			return "";
-		}
-	}
-	*/
 }
